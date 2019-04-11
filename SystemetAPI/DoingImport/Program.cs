@@ -1,33 +1,32 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using SystemetAPI.Models;
 
-namespace SystemetAPI
+namespace DoingImport
 {
-    public class ImportToDB
+    class Program
     {
-        public static XmlNodeList Node;
-        public static void ReadingFIle()
+        static async void Main(string[] args)
         {
-            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+            Console.WriteLine("U wanna update the database? Y/N");
+            string userInput = Console.ReadLine();
 
-            XmlDocument document = new XmlDocument();
-            document.Load("https://www.systembolaget.se/api/assortment/products/xml");
-
-            XmlElement element = document.DocumentElement;
-            Node = element.SelectNodes("artikel");
-
-            AddingToD();
+            if (userInput == "Y")
+            {
+                await AddingToD();
+            }
         }
 
-        public static void AddingToD()
+        public static XmlNodeList Node;
+        
+        public async static Task AddingToD()
         {
+            ReadingFIle();
+
             for (int i = 0; i < Node.Count; i++)
             {
                 int nrIn = int.Parse(Node.Item(i).SelectSingleNode("nr").InnerText);
@@ -47,12 +46,7 @@ namespace SystemetAPI
                 decimal volymiMilliliter = decimal.Parse(Node.Item(i).SelectSingleNode("Volymiml").InnerText);
                 decimal prisPerLitern = decimal.Parse(Node.Item(i).SelectSingleNode("PrisPerLiter").InnerText);
                 DateTime saljstarten = DateTime.ParseExact(Node.Item(i).SelectSingleNode("Saljstart").InnerText, "yyyy-MM-dd", CultureInfo.InvariantCulture);
-                bool utgatt = false;
-                string utgattstring = Node.Item(i).SelectSingleNode("Utgått").InnerText;
-                if (utgattstring == "1")
-                {
-                    utgatt = true;
-                }
+               
                 string varugruppen = "";
                 try
                 {
@@ -64,7 +58,6 @@ namespace SystemetAPI
                 string typen = Node.Item(i).SelectSingleNode("Typ").InnerText;
                 string stilen = Node.Item(i).SelectSingleNode("Stil").InnerText;
                 string forpackningen = Node.Item(i).SelectSingleNode("Forpackning").InnerText;
-                string forslutningen = Node.Item(i).SelectSingleNode("Forslutning").InnerText;
                 string ursprunget = Node.Item(i).SelectSingleNode("Ursprung").InnerText;
                 string landet = Node.Item(i).SelectSingleNode("Ursprunglandnamn").InnerText;
                 string producenten = "";
@@ -83,40 +76,12 @@ namespace SystemetAPI
                 catch (Exception)
                 {
                 }
-                string argangenString = Node.Item(i).SelectSingleNode("Argang").InnerText;
-                int argangen = 0;
-                if (argangenString != "")
-                {
-                    argangen = int.Parse(Node.Item(i).SelectSingleNode("Argang").InnerText);
-                }
-                int provardargangen = 0;
-                if (Node.Item(i).SelectSingleNode("Provadargang").InnerText != "")
-                {
-                    provardargangen = int.Parse(Node.Item(i).SelectSingleNode("Provadargang").InnerText);
-                }
+
                 string alkoholString = Node.Item(i).SelectSingleNode("Alkoholhalt").InnerText;
                 decimal alkoholhalten = 0;
                 if (alkoholString.Contains('%'))
                 {
                     alkoholhalten = decimal.Parse(alkoholString.Substring(0, alkoholString.Length - 1));
-                }
-                string sortimentet = Node.Item(i).SelectSingleNode("Sortiment").InnerText;
-                string sortimentetTexten = Node.Item(i).SelectSingleNode("SortimentText").InnerText;
-                bool ekolokiskt = false;
-                string ekostring = Node.Item(i).SelectSingleNode("Ekologisk").InnerText;
-                if (utgattstring == "1")
-                {
-                    utgatt = true;
-                }
-                bool etiskt = false;
-                if (Node.Item(i).SelectSingleNode("Etiskt").InnerText == "1")
-                {
-                    utgatt = true;
-                }
-                bool koschert = false;
-                if (Node.Item(i).SelectSingleNode("Koscher").InnerText == "1")
-                {
-                    utgatt = true;
                 }
                 string ravarorBeskrivningen = "";
                 try
@@ -150,32 +115,34 @@ namespace SystemetAPI
                         VolymIml = volymiMilliliter,
                         PrisPerLiter = prisPerLitern,
                         Saljstart = saljstarten,
-                        Utgatt = utgatt,
                         Varugrupp = varugruppen,
                         Typ = typen,
                         Stil = stilen,
                         Forpackning = forpackningen,
-                        Forslutning = forslutningen,
                         Ursprung = ursprunget,
                         Land = landet,
                         Producent = producenten,
                         Leverantör = leverantoren,
-                        Argang = argangen,
-                        Provadarargang = provardargangen,
                         Alkoholhalt = alkoholhalten,
-                        Sortiment = sortimentet,
-                        SortimentText = sortimentetTexten,
-                        Ekolokisk = ekolokiskt,
-                        Etiskt = etiskt,
-                        Koscher = koschert,
                         RavarorDesc = ravarorBeskrivningen
                     };
 
                     vRContext.Add(addThis);
-                    vRContext.SaveChanges();
+                    await vRContext.SaveChangesAsync();
                 }
-
+               
             }
+
+        }
+        public static void ReadingFIle()
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+
+            XmlDocument document = new XmlDocument();
+            document.Load("https://www.systembolaget.se/api/assortment/products/xml");
+
+            XmlElement element = document.DocumentElement;
+            Node = element.SelectNodes("artikel");
         }
     }
 }
